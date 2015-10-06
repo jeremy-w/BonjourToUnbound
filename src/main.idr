@@ -49,19 +49,25 @@ updateRecordsFor hostname =
           unboundRegister records
 
 
+reportError : String -> IO ()
+reportError message =
+  putStrLn $
+    PROGNAME ++ ": " ++ message
+
+
 main : IO ()
 main = do
   arguments <- getArgs
   let maybeHostname = hostnameFromArguments arguments
   case maybeHostname of
     Nothing => do
-      putStrLn $ PROGNAME ++ ": missing required argument HOSTNAME"
+      reportError "missing required argument HOSTNAME"
       printUsage
 
     Just hostname =>
       case updateRecordsFor hostname of
         Left error =>
-          putStrLn error
+          reportError error
 
         Right _ =>
           return ()
