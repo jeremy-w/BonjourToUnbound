@@ -6,6 +6,8 @@ https://mozilla.org/MPL/2.0/.
 
 module Main
 
+import DNSSD
+
 PROGNAME : String
 PROGNAME = "local_network_injector"
 
@@ -29,10 +31,6 @@ printUsage =
     ++ "Deletes local records for HOSTNAME if no DNS-SD results are found."
 
 
-DNSRecord : Type
-DNSRecord =
-  String
-
 {-
 Using lldb to watch for calls to DNS* functions when running
 `dns-sd -q Hostname.local. A IN` shows it calls out to:
@@ -43,21 +41,21 @@ Using lldb to watch for calls to DNS* functions when running
   this is called as part of SetDispatchQueue's implementation
 - DNSServiceProcessResult: called on the DNSServiceRef to trigger callbacks
 -}
-bonjourQuery : String -> Either String (Maybe $ List $ DNSRecord)
+bonjourQuery : String -> Either String (List DNSSD.ResourceRecord)
 bonjourQuery hostname =
-  Left "undefined"
+  DNSSD.serviceQueryRecord hostname DNSSD.A DNSSD.IN
 
 unboundRemove : String -> Either String ()
 unboundRemove hostname =
   Left "undefined"
 
-unboundRegister : List DNSRecord -> Either String ()
+unboundRegister : List DNSSD.ResourceRecord -> Either String ()
 unboundRegister records =
   Left "undefined"
 
-rewriteHostnameFromToIn : String -> String -> List String -> List DNSRecord
-rewriteHostnameFromToIn fromName toName inRecords =
-  ["unimplemented"]
+rewriteFullnameToIn : String -> List DNSSD.ResourceRecord -> List DNSSD.ResourceRecord
+rewriteFullnameToIn toName inRecords =
+  map (record { fullname = toName }) inRecords
 
 
 
@@ -68,13 +66,13 @@ updateRecordsForHostnamePerBonjourName hostname bonjourName =
     Left error =>
       Left error
 
-    Right maybeRecords =>
-      case maybeRecords of
-        Nothing =>
+    Right records =>
+      case records of
+        [] =>
           unboundRemove hostname
 
-        Just records =>
-          unboundRegister $ rewriteHostnameFromToIn bonjourName hostname records
+        _ =>
+          unboundRegister $ rewriteFullnameToIn hostname records
 
 
 reportError : String -> IO ()
