@@ -47,11 +47,13 @@ bonjourQuery hostname =
 
 unboundRemove : String -> Either String ()
 unboundRemove hostname =
-  Left "undefined"
+  Left $
+    "unboundRemove " ++ hostname ++ ": not yet implemented"
 
 unboundRegister : List DNSSD.ResourceRecord -> Either String ()
 unboundRegister records =
-  Left "undefined"
+  Left $
+    "unboundRegister ("++ (show $ length records) ++ " records): not yet implemented"
 
 rewriteFullnameToIn : String -> List DNSSD.ResourceRecord -> List DNSSD.ResourceRecord
 rewriteFullnameToIn toName inRecords =
