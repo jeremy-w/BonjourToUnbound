@@ -1,8 +1,0 @@
-package local_network_injector
-
-modules = Main
-
-sourcedir = src
-executable = local_network_injector
-main = main
-opts = "-p effects"
