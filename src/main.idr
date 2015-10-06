@@ -27,6 +27,16 @@ DNSRecord : Type
 DNSRecord =
   String
 
+{-
+Using lldb to watch for calls to DNS* functions when running
+`dns-sd -q Hostname.local. A IN` shows it calls out to:
+
+- DNSServiceQueryRecord: this is passed a callback
+- DNSServiceSetDispatchQueue: tells the service to deliver callbacks to the target queue
+- DNSServiceRefSockFD: this can be used to watch for readability in a select loop;
+  this is called as part of SetDispatchQueue's implementation
+- DNSServiceProcessResult: called on the DNSServiceRef to trigger callbacks
+-}
 bonjourQuery : String -> Either String (Maybe $ List $ DNSRecord)
 bonjourQuery hostname =
   Left "undefined"
