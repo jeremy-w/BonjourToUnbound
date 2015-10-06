@@ -3,11 +3,11 @@ module Main
 PROGNAME : String
 PROGNAME = "local_network_injector"
 
-hostnameFromArguments : List String -> Maybe String
-hostnameFromArguments arguments =
+hostnamesFromArguments : List String -> Maybe (String, String)
+hostnamesFromArguments arguments =
   case arguments of
-    _ :: hostname :: _ =>
-      Just hostname
+    _ :: hostname :: bonjourHostname :: _ =>
+      Just (hostname, bonjourHostname)
 
     _ =>
       Nothing
@@ -16,9 +16,11 @@ hostnameFromArguments arguments =
 
 printUsage : IO ()
 printUsage =
-  putStrLn $ "usage: " ++ PROGNAME ++ " HOSTNAME\n"
+  putStrLn $ "usage: " ++ PROGNAME ++ " HOSTNAME BONJOUR_HOSTNAME\n"
     ++ "\n"
-    ++ "    Copy DNS-SD query results for HOSTNAME into Unbound's local data records."
+    ++ "Copy DNS-SD query results for BONJOUR_HOSTNAME \n"
+    ++ "into Unbound's local data records for HOSTNAME.\n"
+    ++ "Deletes local records for HOSTNAME if no DNS-SD results are found."
 
 
 DNSRecord : Type
@@ -37,11 +39,15 @@ unboundRegister : List DNSRecord -> Either String ()
 unboundRegister records =
   Left "undefined"
 
+rewriteHostnameFromToIn : String -> String -> List String -> List DNSRecord
+rewriteHostnameFromToIn fromName toName inRecords =
+  ["unimplemented"]
 
 
-updateRecordsFor : String -> Either String ()
-updateRecordsFor hostname =
-  let result = bonjourQuery hostname in
+
+updateRecordsForHostnamePerBonjourName : String -> String -> Either String ()
+updateRecordsForHostnamePerBonjourName hostname bonjourName =
+  let result = bonjourQuery bonjourName in
   case result of
     Left error =>
       Left error
@@ -52,7 +58,7 @@ updateRecordsFor hostname =
           unboundRemove hostname
 
         Just records =>
-          unboundRegister records
+          unboundRegister $ rewriteHostnameFromToIn bonjourName hostname records
 
 
 reportError : String -> IO ()
@@ -64,14 +70,14 @@ reportError message =
 main : IO ()
 main = do
   arguments <- getArgs
-  let maybeHostname = hostnameFromArguments arguments
-  case maybeHostname of
+  let maybeHostnames = hostnamesFromArguments arguments
+  case maybeHostnames of
     Nothing => do
-      reportError "missing required argument HOSTNAME"
+      reportError "missing required arguments: HOSTNAME or BONJOUR_HOSTNAME"
       printUsage
 
-    Just hostname =>
-      case updateRecordsFor hostname of
+    Just (hostname, bonjourHostname) =>
+      case updateRecordsForHostnamePerBonjourName hostname bonjourHostname of
         Left error =>
           reportError error
 
