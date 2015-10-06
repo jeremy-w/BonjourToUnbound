@@ -5,7 +5,13 @@ PROGNAME = "local_network_injector"
 
 hostnameFromArguments : List String -> Maybe String
 hostnameFromArguments arguments =
-  Nothing
+  case arguments of
+    _ :: hostname :: _ =>
+      Just hostname
+
+    _ =>
+      Nothing
+
 
 
 printUsage : IO ()
