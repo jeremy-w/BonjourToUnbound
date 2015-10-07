@@ -44,13 +44,43 @@ record ResourceRecord where
   rrClass : ResourceRecordClass
   timeToLive : Int
 
+
+private
+synchronouslyQueryRecord : String -> ResourceRecordType -> ResourceRecordClass
+  -> IO Ptr
+synchronouslyQueryRecord fullName rrType rrClass =
+  foreign FFI_C
+  "synchronouslyQueryRecord"
+  (String -> Int -> Int -> IO Ptr)
+  fullName (resourceRecordType rrType) (resourceRecordClass rrClass)
+
+
+private
+queryResultIsError : Ptr -> IO Bool
+queryResultIsError result = do
+  intVal <- foreign FFI_C
+    "queryResultIsError"
+    (Ptr -> IO Int)
+    result
+  return $ intVal /= 0
+
+
+private
+queryResultError : Ptr -> IO Int
+queryResultError result =
+  foreign FFI_C
+  "queryResultError"
+  (Ptr -> IO Int)
+  result
+
+
 ||| Synchronously queries for a record on all interfaces.
 abstract
 serviceQueryRecord : String -> ResourceRecordType -> ResourceRecordClass
   -> IO $ Either String (List ResourceRecord)
 serviceQueryRecord fullName rrType rrClass = do
-  queryResult <- foreign FFI_C
-    "synchronouslyQueryRecord"
-    (String -> Int -> Int -> IO Ptr)
-    fullName (resourceRecordType rrType) (resourceRecordClass rrClass)
-  return (Left "serviceQueryRecord: WIP")
+  queryResult <- synchronouslyQueryRecord fullName rrType rrClass
+  isError <- queryResultIsError queryResult
+  if isError
+  then return $ Left $ "error " ++ show !(queryResultError queryResult)
+  else return $ Left "serviceQueryRecord: WIP"
