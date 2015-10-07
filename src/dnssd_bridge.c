@@ -1,6 +1,51 @@
 #include <inttypes.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
+#include <sys/select.h>
 #include <dns_sd.h>
+
+/** synchronouslyQueryRecord blocks till all responses to a query for the specified
+ *  DNS records complete, or until a default timeout expires, whichever comes first.
+ *
+ *  The return value can be examined using the queryResult* functions in order to
+ *  discover the result of the query (success with zero or more records
+ *  or failure due to an error). */
+struct QueryResult *synchronouslyQueryRecord(
+  const char *fullname, uint16_t resourceRecordType, uint16_t resourceRecordClass);
+
+
+/** queryResultIsError is used to discriminate between success and failure.
+ *  If true, then use queryResultError to retrieve the result; otherwise, use
+ *  queryResultRecordList to get the head of the result record list. */
+bool queryResultIsError(struct QueryResult *result);
+
+/** queryResultError returns the kDNSServiceErr_* value returned by the underlying
+ *  system. The raw type is used to save you looking up what the typedef resolves to
+ *  when calling this function through FFI. */
+int32_t queryResultError(struct QueryResult *result);
+
+/** queryResultRecordList returns the head of the result list.
+ *
+ *  If NULL, then the list is empty, meaning the query successfully found all zero
+ *  matching records.
+ *
+ *  If non-NULL, then use the record* functions to destructure the record. */
+struct ResourceRecord *queryResultRecordList(struct QueryResult *result);
+
+
+#define RECORD_FIELD_GETTER(type, suffix, field, default) \
+type record##field (struct ResourceRecord *record);
+RECORD_FIELD_GETTER(struct ResourceRecord *, Next, next, NULL)
+RECORD_FIELD_GETTER(const char *, Fullname, fullname, "")
+RECORD_FIELD_GETTER(uint16_t, RRType, rrtype, 0)
+RECORD_FIELD_GETTER(uint16_t, RRClass, rrclass, 0)
+RECORD_FIELD_GETTER(uint32_t, TTL, ttl, 0)
+#undef RECORD_FIELD_GETTER
+
+
 
 struct ResourceRecord {
   struct ResourceRecord **next;
@@ -41,7 +86,7 @@ queryResultIsError(struct QueryResult *result)
   return result ? result->is_error : false;
 }
 
-uint32_t
+int32_t
 queryResultError(struct QueryResult *result)
 {
   return result ? result->error : 0;
@@ -72,6 +117,7 @@ queryResultFree(struct QueryResult *result)
   free(result);
 }
 
+
 struct QueryContext {
   /* Owned by |synchronouslyQueryRecord|, borrowed by |appendResponse|. */
   struct QueryResult *result;
@@ -80,7 +126,8 @@ struct QueryContext {
   bool stop_waiting;
 };
 
-void
+
+static void
 appendResponse(
     DNSServiceRef sdRef,
     DNSServiceFlags flags,
@@ -92,32 +139,120 @@ appendResponse(
     uint16_t rdlen,
     const void                          *rdata,
     uint32_t ttl,
-    void                                *context
+    void                                *untyped_context
 )
 {
-  /* TODO: implement */
+  fprintf(stderr, "%s: flags: %08x - interface %"PRIu32" - errorCode %"PRId32
+      " - fullname %s - rdlen %"PRIu16" - rdata $%p - ttl %"PRIu32"\n",
+      __func__, flags, interfaceIndex, errorCode,
+      fullname, rdlen, rdata, ttl);
+
+  struct QueryContext *context = untyped_context;
+
+  bool are_more_results_coming = ((flags & kDNSServiceFlagsMoreComing)
+      == kDNSServiceFlagsMoreComing);
+  if (!are_more_results_coming) {
+    context->stop_waiting = true;
+  }
+
+  bool should_add_result = ((flags & kDNSServiceFlagsAdd) == kDNSServiceFlagsAdd);
+  if (!should_add_result) {
+    return;
+  }
+
+  struct ResourceRecord *record = calloc(1, sizeof(*record));
+  record->rrtype = rrtype;
+  record->rrclass = rrclass;
+  record->ttl = ttl;
+
+  size_t name_length = strlen(fullname);
+  size_t buffer_size = name_length + 1;
+  char *buffer = calloc(1, buffer_size);
+  // ignore return value - our buffer is sized based on the strlen already
+  (void)strlcpy(buffer, fullname, buffer_size);
+  record->fullname = buffer;
+
+  struct QueryResult *result = context->result;
+  record->next = &(result->records);
+  result->records = record;
 }
+
 
 struct QueryResult *
 synchronouslyQueryRecord(
   const char *fullname, uint16_t resourceRecordType, uint16_t resourceRecordClass)
 {
-  struct QueryResult *result = malloc(sizeof(*result));
+  struct QueryResult *result = calloc(1, sizeof(*result));
+  struct QueryContext context = {.result = result, .stop_waiting = false};
   DNSServiceRef sdRef = NULL;
   DNSServiceErrorType error = DNSServiceQueryRecord(
     &sdRef, kDNSServiceFlagsTimeout, kDNSServiceInterfaceIndexAny,
     fullname, resourceRecordType, resourceRecordClass,
-    appendResponse, result);
+    appendResponse, &context);
   if (error) {
     result->is_error = true;
     result->error = error;
+    fprintf(stderr, "%s: DNSServiceQueryRecord: error %"PRId32"\n", __func__, error);
     return result;
   }
 
-  int read_fd = DNSServiceRefSockFD(sdRef);
-  /* TODO: select till readable, then drain */
-  result->is_error = true;
-  result->error = kDNSServiceErr_NotInitialized;
+
+#define USE_SIMPLER_BLOCKING_APPROACH 1
+#if USE_SIMPLER_BLOCKING_APPROACH
+for (;;) {
+  fprintf(stderr, "%s: waiting on DNSServiceProcessResult\n", __func__);
+  DNSServiceErrorType error = DNSServiceProcessResult(sdRef);
+
+  if (error) {
+    bool should_ignore_error = (error = kDNSServiceErr_Timeout
+      || result->records != NULL);
+    if (!should_ignore_error) {
+      result->is_error = true;
+      result->error = error;
+      fprintf(stderr, "%s: DNSServiceProcessResult: error %"PRId32"\n", __func__, error);
+    }
+    break;
+  }
+
+  if (context.stop_waiting) {
+    break;
+  }
+}
+#else
+  fd_set read_fdset;
+  fd_set error_fdset;
+  int service_fd = DNSServiceRefSockFD(sdRef);
+  for (;;) {
+    FD_CLR(&read_fdset);
+    FD_SET(service_fd, &read_fdset);
+    FD_COPY(&read_fdset, &error_fdset);
+
+    /* TODO: fill in timeval with a max timeout, otherwise, why bother with select? */
+    int nready = select(service_fd + 1, read_fdset, NULL, read_fdset, NULL);
+
+    bool did_error = nready < 0;
+    if (did_error) {
+      bool is_temporary_error = errno == EINTR || errno == EAGAIN;
+      if (is_temporary_error) {
+        continue;
+      }
+      perror("select")
+      break;
+    }
+
+    bool is_readable = FD_ISSET(service_fd, &read_fdset);
+    if (is_readable) {
+      DNSServiceErrorType error = DNSServiceProcessResult(sdRef);
+      if (error) {
+        break;
+      }
+      if (context.stop_waiting) {
+        break;
+      }
+    }
+  }
+#endif  // USE_SIMPLER_BLOCKING_APPROACH
+
   DNSServiceRefDeallocate(sdRef);
   return result;
 }
