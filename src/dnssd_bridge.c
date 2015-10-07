@@ -116,6 +116,8 @@ queryResultFree(struct QueryResult *result)
   for (struct ResourceRecord *record = result->records, *next = NULL;
     record != NULL; record = next) {
     next = *(record->next);
+    free(record->fullname);
+    free(record->address);
     free(record);
   }
   free(result);
