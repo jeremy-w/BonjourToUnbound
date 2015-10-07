@@ -108,8 +108,8 @@ resourceRecordFree(struct ResourceRecord *record)
 {
   if (!record) return;
 
-  free(record->fullname);
-  free(record->address);
+  free((char *)record->fullname);
+  free((char *)record->address);
   free(record);
 }
 
