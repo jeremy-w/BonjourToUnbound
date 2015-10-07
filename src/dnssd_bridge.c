@@ -40,6 +40,7 @@ struct ResourceRecord *queryResultRecordList(struct QueryResult *result);
 type record##field (struct ResourceRecord *record);
 RECORD_FIELD_GETTER(struct ResourceRecord *, Next, next, NULL)
 RECORD_FIELD_GETTER(const char *, Fullname, fullname, "")
+RECORD_FIELD_GETTER(const char *, Address, address, "")
 RECORD_FIELD_GETTER(uint16_t, RRType, rrtype, 0)
 RECORD_FIELD_GETTER(uint16_t, RRClass, rrclass, 0)
 RECORD_FIELD_GETTER(uint32_t, TTL, ttl, 0)
@@ -50,6 +51,7 @@ RECORD_FIELD_GETTER(uint32_t, TTL, ttl, 0)
 struct ResourceRecord {
   struct ResourceRecord **next;
   const char *fullname;
+  const char *address;
   uint16_t rrtype;
   uint16_t rrclass;
   uint32_t ttl;
@@ -69,6 +71,7 @@ record##suffix (struct ResourceRecord *record) \
 }
 //RECORD_FIELD_GETTER(struct ResourceRecord *, Next, next, NULL)
 RECORD_FIELD_GETTER(const char *, Fullname, fullname, "")
+RECORD_FIELD_GETTER(const char *, Address, address, "")
 RECORD_FIELD_GETTER(uint16_t, RRType, rrtype, 0)
 RECORD_FIELD_GETTER(uint16_t, RRClass, rrclass, 0)
 RECORD_FIELD_GETTER(uint32_t, TTL, ttl, 0)
