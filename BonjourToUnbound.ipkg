@@ -6,4 +6,5 @@ modules = Main
 sourcedir = src
 executable = bonjour_to_unbound
 main = main
-opts = "-p effects"
+
+objs = dnssd_bridge.c

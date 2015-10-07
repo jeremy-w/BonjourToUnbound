@@ -41,18 +41,18 @@ Using lldb to watch for calls to DNS* functions when running
   this is called as part of SetDispatchQueue's implementation
 - DNSServiceProcessResult: called on the DNSServiceRef to trigger callbacks
 -}
-bonjourQuery : String -> Either String (List DNSSD.ResourceRecord)
+bonjourQuery : String -> IO $ Either String (List DNSSD.ResourceRecord)
 bonjourQuery hostname =
   DNSSD.serviceQueryRecord hostname DNSSD.A DNSSD.IN
 
-unboundRemove : String -> Either String ()
+unboundRemove : String -> IO $ Either String ()
 unboundRemove hostname =
-  Left $
+  return $ Left $
     "unboundRemove " ++ hostname ++ ": not yet implemented"
 
-unboundRegister : List DNSSD.ResourceRecord -> Either String ()
+unboundRegister : List DNSSD.ResourceRecord -> IO $ Either String ()
 unboundRegister records =
-  Left $
+  return $ Left $
     "unboundRegister ("++ (show $ length records) ++ " records): not yet implemented"
 
 rewriteFullnameToIn : String -> List DNSSD.ResourceRecord -> List DNSSD.ResourceRecord
@@ -61,12 +61,12 @@ rewriteFullnameToIn toName inRecords =
 
 
 
-updateRecordsForHostnamePerBonjourName : String -> String -> Either String ()
-updateRecordsForHostnamePerBonjourName hostname bonjourName =
-  let result = bonjourQuery bonjourName in
+updateRecordsForHostnamePerBonjourName : String -> String -> IO $ Either String ()
+updateRecordsForHostnamePerBonjourName hostname bonjourName = do
+  result <- bonjourQuery bonjourName
   case result of
     Left error =>
-      Left error
+      return $ Left error
 
     Right records =>
       case records of
@@ -92,8 +92,9 @@ main = do
       reportError "missing required arguments: HOSTNAME or BONJOUR_HOSTNAME"
       printUsage
 
-    Just (hostname, bonjourHostname) =>
-      case updateRecordsForHostnamePerBonjourName hostname bonjourHostname of
+    Just (hostname, bonjourHostname) => do
+      result <- updateRecordsForHostnamePerBonjourName hostname bonjourHostname
+      case result of
         Left error =>
           reportError error
 

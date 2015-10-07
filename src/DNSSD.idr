@@ -1,6 +1,8 @@
 ||| DNSSD bridges to <dns_sd.h>, the C-language DNS Service Discovery API.
 module DNSSD
 
+%include C "dnssd_bridge.c"
+
 public
 data ResourceRecordType =
   A
@@ -44,5 +46,11 @@ record ResourceRecord where
 
 ||| Synchronously queries for a record on all interfaces.
 abstract
-serviceQueryRecord : String -> ResourceRecordType -> ResourceRecordClass -> Either String (List ResourceRecord)
-serviceQueryRecord fullName rrType rrClass = Right []
+serviceQueryRecord : String -> ResourceRecordType -> ResourceRecordClass
+  -> IO $ Either String (List ResourceRecord)
+serviceQueryRecord fullName rrType rrClass = do
+  queryResult <- foreign FFI_C
+    "synchronouslyQueryRecord"
+    (String -> Int -> Int -> IO Ptr)
+    fullName (resourceRecordType rrType) (resourceRecordClass rrClass)
+  return (Left "serviceQueryRecord: WIP")
