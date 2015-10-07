@@ -102,6 +102,18 @@ queryResultRecordList(struct QueryResult *result)
   return result ? result->records : NULL;
 }
 
+
+static void
+resourceRecordFree(struct ResourceRecord *record)
+{
+  if (!record) return;
+
+  free(record->fullname);
+  free(record->address);
+  free(record);
+}
+
+
 void
 queryResultFree(struct QueryResult *result)
 {
@@ -116,9 +128,7 @@ queryResultFree(struct QueryResult *result)
   for (struct ResourceRecord *record = result->records, *next = NULL;
     record != NULL; record = next) {
     next = *(record->next);
-    free(record->fullname);
-    free(record->address);
-    free(record);
+    resourceRecordFree(record);
   }
   free(result);
 }
