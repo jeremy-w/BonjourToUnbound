@@ -168,12 +168,12 @@ appendResponse(
   record->rrclass = rrclass;
   record->ttl = ttl;
 
-  size_t name_length = strlen(fullname);
-  size_t buffer_size = name_length + 1;
-  char *buffer = calloc(1, buffer_size);
+  const size_t name_length = strlen(fullname);
+  const size_t name_buffer_size = name_length + 1;
+  char *name_buffer = calloc(1, name_buffer_size);
   // ignore return value - our buffer is sized based on the strlen already
-  (void)strlcpy(buffer, fullname, buffer_size);
-  record->fullname = buffer;
+  (void)strlcpy(name_buffer, fullname, name_buffer_size);
+  record->fullname = name_buffer;
 
   struct QueryResult *result = context->result;
   record->next = &(result->records);
