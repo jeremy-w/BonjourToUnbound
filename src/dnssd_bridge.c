@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/select.h>
+#include <arpa/inet.h>
 #include <dns_sd.h>
 
 /** synchronouslyQueryRecord blocks till all responses to a query for the specified
@@ -174,6 +175,16 @@ appendResponse(
   // ignore return value - our buffer is sized based on the strlen already
   (void)strlcpy(name_buffer, fullname, name_buffer_size);
   record->fullname = name_buffer;
+
+  const bool is_ipv4 = (rrtype == kDNSServiceType_A);
+  const size_t address_buffer_size = (is_ipv4
+      ? INET_ADDRSTRLEN
+      : INET6_ADDRSTRLEN);
+  char *address_buffer = calloc(1, address_buffer_size);
+  const int address_family = is_ipv4 ? AF_INET : AF_INET6;
+  record->address = inet_ntop(
+      address_family, rdata, address_buffer, address_buffer_size);
+  fprintf(stderr, "%s: address is: %s\n", __func__, record->address);
 
   struct QueryResult *result = context->result;
   record->next = &(result->records);
