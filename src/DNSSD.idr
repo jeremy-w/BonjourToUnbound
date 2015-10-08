@@ -74,6 +74,27 @@ queryResultError result =
   result
 
 
+private
+queryResultRecordList : Ptr -> IO Ptr
+queryResultRecordList result =
+  foreign FFI_C
+  "queryResultRecordList"
+  (Ptr -> IO Ptr)
+  result
+
+
+private
+resultRecordToResourceRecord : Ptr -> IO $ ResourceRecord
+resultRecordToResourceRecord headResult =
+  return $ mkResourceRecord "WIP" A IN 0
+
+
+private
+extractResultList : Ptr -> IO $ List Ptr
+extractResultList queryResult =
+  return $ List.Nil
+
+
 ||| Synchronously queries for a record on all interfaces.
 abstract
 serviceQueryRecord : String -> ResourceRecordType -> ResourceRecordClass
@@ -83,4 +104,7 @@ serviceQueryRecord fullName rrType rrClass = do
   isError <- queryResultIsError queryResult
   if isError
   then return $ Left $ "error " ++ show !(queryResultError queryResult)
-  else return $ Left "serviceQueryRecord: WIP"
+  else do
+    results <- extractResultList queryResult
+    records <- sequence $ map resultRecordToResourceRecord results
+    return $ Right records
