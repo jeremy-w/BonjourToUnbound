@@ -135,16 +135,16 @@ queryResultFree(struct QueryResult *result)
 
 
 struct QueryContext {
-  /* Owned by |synchronouslyQueryRecord|, borrowed by |appendResponse|. */
+  /* Owned by |synchronouslyQueryRecord|, borrowed by |consQueryRecord|. */
   struct QueryResult *result;
 
-  /* Set by |appendResponse| to terminate the select loop. */
+  /* Set by |consQueryRecord| to terminate the select loop. */
   bool stop_waiting;
 };
 
 
 static void
-appendResponse(
+consQueryRecord(
     DNSServiceRef sdRef,
     DNSServiceFlags flags,
     uint32_t interfaceIndex,
@@ -214,7 +214,7 @@ synchronouslyQueryRecord(
   DNSServiceErrorType error = DNSServiceQueryRecord(
     &sdRef, kDNSServiceFlagsTimeout, kDNSServiceInterfaceIndexAny,
     fullname, resourceRecordType, resourceRecordClass,
-    appendResponse, &context);
+    consQueryRecord, &context);
   if (error) {
     result->is_error = true;
     result->error = error;
