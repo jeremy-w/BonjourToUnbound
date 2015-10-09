@@ -8,6 +8,8 @@
 /** synchronouslyQueryRecord blocks till all responses to a query for the specified
  *  DNS records complete, or until a default timeout expires, whichever comes first.
  *
+ *  As of OS X 10.10.5, the default timeout appears to be thirty seconds.
+ *
  *  The return value can be examined using the queryResult* functions in order to
  *  discover the result of the query (success with zero or more records
  *  or failure due to an error). */
