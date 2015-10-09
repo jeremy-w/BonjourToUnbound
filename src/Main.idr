@@ -69,8 +69,7 @@ singleQuoteString string = "'" ++ string ++ "'"
 
 unboundRemove : String -> IO $ Either String ()
 unboundRemove hostname =
-  return $ Left $
-    "unboundRemove " ++ hostname ++ ": not yet implemented"
+  unboundControl ["local_data_remove", singleQuoteString hostname]
 
 
 resourceRecordToLocalData : DNSSD.ResourceRecord -> String
