@@ -90,8 +90,8 @@ resultRecordToResourceRecord headResult =
 
 
 private
-extractResultList : Ptr -> IO $ List Ptr
-extractResultList queryResult = do
+queryResultResourceRecords : Ptr -> IO $ List Ptr
+queryResultResourceRecords queryResult = do
     head <- queryResultRecordList queryResult
     list <- collect walkNextPointer head
     return list
@@ -148,6 +148,6 @@ serviceQueryRecord fullName rrType rrClass = do
   if isError
   then return $ Left $ "error " ++ show !(queryResultError queryResult)
   else do
-    results <- extractResultList queryResult
-    records <- sequence $ map resultRecordToResourceRecord results
+    resultRecords <- queryResultResourceRecords queryResult
+    records <- sequence $ map resultRecordToResourceRecord resultRecords
     return $ Right records
