@@ -21,9 +21,8 @@ resourceRecordType rrType =
 
 private resourceRecordTypeFromInt : Int -> ResourceRecordType
 resourceRecordTypeFromInt n =
-  let rawAAAA = resourceRecordType AAAA in
   case n of
-    rawAAAA =>
+    28 =>
       AAAA
 
     _ =>
