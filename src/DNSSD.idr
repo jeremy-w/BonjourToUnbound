@@ -7,7 +7,7 @@ https://mozilla.org/MPL/2.0/.
 module DNSSD
 
 %include C "dnssd_bridge.c"
-
+%default total
 
 
 public
@@ -199,17 +199,22 @@ queryResultResourceRecords queryResult = do
     -}
     collect : (b -> IO $ Maybe (a, b)) -> b -> IO $ List a
     collect generate seed =
-      collect' [] seed
+      collect' 50 [] seed
       where
-        collect' : List a -> b -> IO $ List a
-        collect' accumulator seed = do
-          maybeNext <- generate seed
-          case maybeNext of
-            Nothing =>
+        collect' : Nat -> List a -> b -> IO $ List a
+        collect' fuel accumulator seed =
+          case fuel of
+            Z =>
               return $ reverse accumulator
 
-            Just (output, nextSeed) =>
-              collect' (output :: accumulator) nextSeed
+            (S n) => do
+              maybeNext <- generate seed
+              case maybeNext of
+                Nothing =>
+                  return $ reverse accumulator
+
+                Just (output, nextSeed) =>
+                  collect' n (output :: accumulator) nextSeed
 
 
     resourceNext : Ptr -> IO Ptr
