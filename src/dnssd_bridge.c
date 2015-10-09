@@ -50,7 +50,7 @@ RECORD_FIELD_GETTER(uint32_t, TTL, ttl, 0)
 
 
 struct ResourceRecord {
-  struct ResourceRecord **next;
+  struct ResourceRecord *next;
   const char *fullname;
   const char *address;
   uint16_t rrtype;
@@ -58,19 +58,13 @@ struct ResourceRecord {
   uint32_t ttl;
 };
 
-struct ResourceRecord *
-recordNext(struct ResourceRecord *record)
-{
-  return record ? *(record->next) : NULL;
-}
-
 #define RECORD_FIELD_GETTER(type, suffix, field, default) \
 type \
 record##suffix (struct ResourceRecord *record) \
 { \
   return record ? record->field : default; \
 }
-//RECORD_FIELD_GETTER(struct ResourceRecord *, Next, next, NULL)
+RECORD_FIELD_GETTER(struct ResourceRecord *, Next, next, NULL)
 RECORD_FIELD_GETTER(const char *, Fullname, fullname, "")
 RECORD_FIELD_GETTER(const char *, Address, address, "")
 RECORD_FIELD_GETTER(uint16_t, RRType, rrtype, 0)
@@ -127,7 +121,7 @@ queryResultFree(struct QueryResult *result)
   /* Walk the list, and for each node, read the next pointer, then free the current node. */
   for (struct ResourceRecord *record = result->records, *next = NULL;
     record != NULL; record = next) {
-    next = *(record->next);
+    next = record->next;
     resourceRecordFree(record);
   }
   free(result);
@@ -199,7 +193,7 @@ consQueryRecord(
   fprintf(stderr, "%s: address is: %s\n", __func__, record->address);
 
   struct QueryResult *result = context->result;
-  record->next = &(result->records);
+  record->next = result->records;
   result->records = record;
 }
 
