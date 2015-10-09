@@ -18,6 +18,19 @@ resourceRecordType rrType =
     AAAA =>
       28
 
+
+private resourceRecordTypeFromInt : Int -> ResourceRecordType
+resourceRecordTypeFromInt n =
+  let rawAAAA = resourceRecordType AAAA in
+  case n of
+    rawAAAA =>
+      AAAA
+
+    _ =>
+      A
+
+
+
 public
 data ResourceRecordClass = IN
 
@@ -28,13 +41,13 @@ resourceRecordClass rrClass =
     IN =>
       1
 
-private
-kDNSServiceFlagsTimeout : Int
-kDNSServiceFlagsTimeout            = 0x10000
 
 private
-kDNSServiceFlagsValidate : Int
-kDNSServiceFlagsValidate               = 0x200000
+resourceRecordClassFromInt : Int -> ResourceRecordClass
+resourceRecordClassFromInt n =
+  IN
+
+
 
 public
 record ResourceRecord where
