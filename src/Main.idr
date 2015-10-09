@@ -62,6 +62,11 @@ unboundControl arguments = do
     else Left output
   return result
 
+
+singleQuoteString : String -> String
+singleQuoteString string = "'" ++ string ++ "'"
+
+
 unboundRemove : String -> IO $ Either String ()
 unboundRemove hostname =
   return $ Left $
@@ -82,7 +87,7 @@ resourceRecordToLocalData resourceRecord = let
 unboundRegister : List DNSSD.ResourceRecord -> IO $ Either String ()
 unboundRegister records = do
   let entries = map resourceRecordToLocalData records
-  let quotedEntries = map (\entry => "'" ++ entry ++ "'") entries
+  let quotedEntries = map singleQuoteString entries
   let argumentses = map (\entry => ["local_data", entry]) quotedEntries
   results <- for argumentses (\arguments => unboundControl arguments)
   let failures = lefts results
