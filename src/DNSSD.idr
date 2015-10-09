@@ -55,6 +55,7 @@ record ResourceRecord where
   rrType : ResourceRecordType
   rrClass : ResourceRecordClass
   timeToLive : Int
+  address : String
 
 
 private
@@ -97,8 +98,55 @@ queryResultRecordList result =
 
 private
 resultRecordToResourceRecord : Ptr -> IO $ ResourceRecord
-resultRecordToResourceRecord headResult =
-  return $ mkResourceRecord "WIP" A IN 0
+resultRecordToResourceRecord resultRecord = do
+  fullName <- recordFullname resultRecord
+  rawRecordType <- recordRRType resultRecord
+  rawRecordClass <- recordRRClass resultRecord
+  timeToLive <- recordTTL resultRecord
+  address <- recordAddress resultRecord
+  let recordType = resourceRecordTypeFromInt rawRecordType
+  let recordClass = resourceRecordClassFromInt rawRecordClass
+  return $ mkResourceRecord fullName recordType recordClass timeToLive address
+where
+  recordFullname : Ptr -> IO String
+  recordFullname resultRecord =
+    foreign FFI_C
+    "recordFullname"
+    (Ptr -> IO String)
+    resultRecord
+
+
+  recordAddress : Ptr -> IO String
+  recordAddress resultRecord =
+    foreign FFI_C
+    "recordAddress"
+    (Ptr -> IO String)
+    resultRecord
+
+
+  recordRRType : Ptr -> IO Int
+  recordRRType resultRecord =
+    foreign FFI_C
+    "recordRRType"
+    (Ptr -> IO Int)
+    resultRecord
+
+
+  recordRRClass : Ptr -> IO Int
+  recordRRClass resultRecord =
+    foreign FFI_C
+    "recordRRClass"
+    (Ptr -> IO Int)
+    resultRecord
+
+
+  recordTTL : Ptr -> IO Int
+  recordTTL resultRecord =
+    foreign FFI_C
+    "recordTTL"
+    (Ptr -> IO Int)
+    resultRecord
+
 
 
 private
