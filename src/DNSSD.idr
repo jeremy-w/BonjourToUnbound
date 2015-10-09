@@ -91,8 +91,51 @@ resultRecordToResourceRecord headResult =
 
 private
 extractResultList : Ptr -> IO $ List Ptr
-extractResultList queryResult =
-  return $ List.Nil
+extractResultList queryResult = do
+    head <- queryResultRecordList queryResult
+    list <- collect walkNextPointer head
+    return list
+  where
+    {-
+    ||| collect is basically unfoldrM.
+    |||
+    ||| Melvar notes that unfoldr doesn't really belong in the Idris stdlib
+    ||| because it's not total. They suggest looking at Data.CoList in contrib instead,
+    ||| which represents possibly-infinite lists.
+    |||
+    ||| It's not clear to me how Data.CoList would differ from Prelude.Stream, though.
+    -}
+    collect : (b -> IO $ Maybe (a, b)) -> b -> IO $ List a
+    collect generate seed =
+      collect' [] seed
+      where
+        collect' : List a -> b -> IO $ List a
+        collect' accumulator seed = do
+          maybeNext <- generate seed
+          case maybeNext of
+            Nothing =>
+              return $ reverse accumulator
+
+            Just (output, nextSeed) =>
+              collect' (output :: accumulator) nextSeed
+
+
+    resourceNext : Ptr -> IO Ptr
+    resourceNext resourceRecordPtr =
+      foreign FFI_C
+      "recordNext"
+      (Ptr -> IO Ptr)
+      resourceRecordPtr
+
+
+    walkNextPointer : Ptr -> IO $ Maybe (Ptr, Ptr)
+    walkNextPointer resourceRecordPtr = do
+      isNullPtr <- Strings.nullPtr resourceRecordPtr
+      if isNullPtr
+      then return Nothing
+      else do
+        next <- resourceNext resourceRecordPtr
+        return $ Just (resourceRecordPtr, next)
 
 
 ||| Synchronously queries for a record on all interfaces.
