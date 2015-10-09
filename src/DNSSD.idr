@@ -1,3 +1,8 @@
+{-
+This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+If a copy of the MPL was not distributed with this file, You can obtain one at
+https://mozilla.org/MPL/2.0/.
+-}
 ||| DNSSD bridges to <dns_sd.h>, the C-language DNS Service Discovery API.
 module DNSSD
 
