@@ -3,10 +3,23 @@ module DNSSD
 
 %include C "dnssd_bridge.c"
 
+
+
 public
 data ResourceRecordType =
   A
   | AAAA
+
+
+instance Show ResourceRecordType where
+  show rrType =
+    case rrType of
+      A =>
+        "A"
+
+      AAAA =>
+        "AAAA"
+
 
 private
 resourceRecordType : ResourceRecordType -> Int
@@ -33,6 +46,12 @@ resourceRecordTypeFromInt n =
 public
 data ResourceRecordClass = IN
 
+instance Show ResourceRecordClass where
+  show rrClass =
+    case rrClass of
+      IN => "IN"
+
+
 private
 resourceRecordClass : ResourceRecordClass -> Int
 resourceRecordClass rrClass =
@@ -56,6 +75,14 @@ record ResourceRecord where
   rrClass : ResourceRecordClass
   timeToLive : Int
   address : String
+
+
+instance Show ResourceRecord where
+  show rr =
+    let fields = with List map (\f => f rr) [show . fullname, show . rrType, show . rrClass, show . timeToLive, show . address] in
+    let fieldText = concat $ intersperse " " fields in
+    "mkResourceRecord " ++ fieldText
+
 
 
 private

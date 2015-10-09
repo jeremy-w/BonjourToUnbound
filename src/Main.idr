@@ -53,7 +53,7 @@ unboundRemove hostname =
 unboundRegister : List DNSSD.ResourceRecord -> IO $ Either String ()
 unboundRegister records =
   return $ Left $
-    "unboundRegister ("++ (show $ length records) ++ " records): not yet implemented"
+    "unboundRegister ("++ (show records) ++ " records): not yet implemented"
 
 rewriteFullnameToIn : String -> List DNSSD.ResourceRecord -> List DNSSD.ResourceRecord
 rewriteFullnameToIn toName inRecords =
