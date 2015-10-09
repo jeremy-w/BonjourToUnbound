@@ -45,15 +45,53 @@ bonjourQuery : String -> IO $ Either String (List DNSSD.ResourceRecord)
 bonjourQuery hostname =
   DNSSD.serviceQueryRecord hostname DNSSD.A DNSSD.IN
 
+
+
+unboundControl : List String -> IO $ Either String ()
+unboundControl arguments = do
+  let fullArguments = "/usr/local/sbin/unbound-control" :: arguments
+  let command = concat $ intersperse " " fullArguments
+  putStrLn $ "running: " ++ command
+  process <- File.popen command File.Read
+  output <- fread process
+  -- XXX: Idris' pclose doesn't return status.
+  -- Luckily, unbound-control writes "ok\n" on success.
+  pclose process
+  let result = if "ok" `isPrefixOf` output
+    then Right ()
+    else Left output
+  return result
+
 unboundRemove : String -> IO $ Either String ()
 unboundRemove hostname =
   return $ Left $
     "unboundRemove " ++ hostname ++ ": not yet implemented"
 
+
+resourceRecordToLocalData : DNSSD.ResourceRecord -> String
+resourceRecordToLocalData resourceRecord = let
+    fullname = fullname resourceRecord
+    rrType = show $ rrType resourceRecord
+    rrClass = show $ rrClass resourceRecord
+    timeToLive = show $ timeToLive resourceRecord
+    address = address resourceRecord
+  in
+    fullname ++ " " ++ timeToLive ++ " " ++ rrClass ++ " " ++ rrType ++ " " ++ address
+
+
 unboundRegister : List DNSSD.ResourceRecord -> IO $ Either String ()
-unboundRegister records =
-  return $ Left $
-    "unboundRegister ("++ (show records) ++ " records): not yet implemented"
+unboundRegister records = do
+  let entries = map resourceRecordToLocalData records
+  let quotedEntries = map (\entry => "'" ++ entry ++ "'") entries
+  let argumentses = map (\entry => ["local_data", entry]) quotedEntries
+  results <- for argumentses (\arguments => unboundControl arguments)
+  let failures = lefts results
+  let result = if isNil failures
+    then Right ()
+    -- The failure text already includes a final newline, so we don't need to add any.
+    else Left $ concat $ failures
+  return result
+
 
 rewriteFullnameToIn : String -> List DNSSD.ResourceRecord -> List DNSSD.ResourceRecord
 rewriteFullnameToIn toName inRecords =
