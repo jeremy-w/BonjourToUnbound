@@ -8,6 +8,8 @@ module Main
 
 import DNSSD
 
+%default total
+
 PROGNAME : String
 PROGNAME = "local_network_injector"
 
@@ -125,6 +127,8 @@ reportError message =
     PROGNAME ++ ": " ++ message
 
 
+-- getArgs is partial, so main is partial.
+partial
 main : IO ()
 main = do
   arguments <- getArgs
